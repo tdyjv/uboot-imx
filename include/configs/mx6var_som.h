@@ -244,7 +244,7 @@
 	"findfdt="\
 		"if test $fdt_file = undefined; then " \
 			"if test $board_name = DT6CUSTOM && test $board_rev = MX6Q; then " \
-				"setenv fdt_file imx6q-var-dart.dtb; " \
+				"setenv fdt_file teledyne-imx6q-var-dart.dtb; " \
 			"fi; " \
 			"if test $board_name = SOLOCUSTOM && test $board_rev = MX6QP; then " \
 				"setenv fdt_file imx6qp-var-som-vsc.dtb; " \
