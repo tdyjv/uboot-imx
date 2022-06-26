@@ -665,3 +665,6 @@ scripts/kconfig/lxdialog
 tools
 tools/env
 tools/gdb
+.
+.github
+configs

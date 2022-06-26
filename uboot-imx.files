@@ -1,5 +1,7 @@
+.github/README.md
 Kconfig
 Makefile
+README
 api/Kconfig
 api/Makefile
 api/api.c
@@ -8059,6 +8061,7 @@ configs/T4240QDS_SRIO_PCIE_BOOT_defconfig
 configs/T4240QDS_defconfig
 configs/T4240RDB_SDCARD_defconfig
 configs/T4240RDB_defconfig
+configs/TDYSBX-NAV_defconfig
 configs/TQM5200S_HIGHBOOT_defconfig
 configs/TQM5200S_defconfig
 configs/TQM5200_B_HIGHBOOT_defconfig
@@ -12590,6 +12593,7 @@ scripts/kconfig/nconf.h
 scripts/kconfig/qconf.h
 scripts/kconfig/symbol.c
 scripts/kconfig/util.c
+tdysbx.mk
 test/Kconfig
 test/Makefile
 test/cmd_ut.c
