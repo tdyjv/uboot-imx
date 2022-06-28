@@ -86,3 +86,9 @@ GTAGS
 \#*#
 
 *.user
+
+*.so
+
+tools/libfdt.py
+
+tools/libfdt_wrap.c
