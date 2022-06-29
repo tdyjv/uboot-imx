@@ -65,8 +65,6 @@
 #define CONFIG_FAT_WRITE
 
 /* Ethernet Configs */
-#define CONFIG_FEC_MXC
-#define CONFIG_MII
 #define IMX_FEC_BASE			ENET_BASE_ADDR
 #define CONFIG_FEC_XCV_TYPE		RGMII
 #ifdef CONFIG_DM_ETH
@@ -75,8 +73,6 @@
 #define CONFIG_ETHPRIME			"FEC"
 #endif
 #define CONFIG_FEC_MXC_PHYADDR		7
-#define CONFIG_PHYLIB
-#define CONFIG_PHY_MICREL
 
 #define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 

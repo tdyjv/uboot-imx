@@ -354,6 +354,16 @@ static iomux_v3_cfg_t const enet_pads1[] = {
 	IOMUX_PADS(PAD_RGMII_RX_CTL__GPIO6_IO24		| MUX_PAD_CTRL(NO_PAD_CTRL)),
 	/* PHY Reset */
 	IOMUX_PADS(PAD_ENET_CRS_DV__GPIO1_IO25		| MUX_PAD_CTRL(NO_PAD_CTRL)),
+	/* SPI */
+	IOMUX_PADS(PAD_DISP0_DAT3__GPIO4_IO24  | MUX_PAD_CTRL(NO_PAD_CTRL)),
+	/* SPI */
+	IOMUX_PADS(PAD_DISP0_DAT2__GPIO4_IO23 | MUX_PAD_CTRL(NO_PAD_CTRL)),
+	/* SPI */
+	IOMUX_PADS(PAD_DISP0_DAT1__GPIO4_IO22 | MUX_PAD_CTRL(NO_PAD_CTRL)),
+	/* SPI */
+	IOMUX_PADS(PAD_DISP0_DAT0__GPIO4_IO21 | MUX_PAD_CTRL(NO_PAD_CTRL)),
+	/* FTDI RESET PIN */
+	IOMUX_PADS(PAD_GPIO_3__GPIO1_IO03 | MUX_PAD_CTRL(NO_PAD_CTRL)),
 };
 
 static iomux_v3_cfg_t const enet_pads2[] = {
@@ -944,6 +954,87 @@ int overwrite_console(void)
 	return 1;
 }
 
+#define SPI_CLK IMX_GPIO_NR(4, 21)
+#define SPI_MISO IMX_GPIO_NR(4, 23) 
+#define SPI_MOSI IMX_GPIO_NR(4, 22)
+#define SPI_SS0 IMX_GPIO_NR(4, 24)
+
+void configure_spi_pins(void)
+{
+	mdelay(1);
+	printf("Configuring SPI\n");
+	gpio_request(SPI_CLK, "SPI3 CLK");
+	gpio_request(SPI_MISO, "SPI3 MISO");
+	gpio_request(SPI_MOSI, "SPI3 MOSI");
+	gpio_request(SPI_SS0, "SPI3 SS0");
+	gpio_request(IMX_GPIO_NR(1, 3), "FTDIO_RESET");
+
+	gpio_direction_output(SPI_CLK, 1);
+	gpio_direction_output(SPI_MOSI, 1);
+	gpio_direction_output(SPI_SS0, 1);
+	gpio_direction_output(IMX_GPIO_NR(1, 3), 1);
+	gpio_direction_input(SPI_MISO);
+}
+
+void spi_write_reg(int reg_addr, int data)
+{
+	u32 clocked_data = (((2 << 24) | reg_addr) << 5);
+
+	gpio_set_value(SPI_CLK, 1);
+	udelay(500);
+	gpio_set_value(SPI_SS0, 0);
+	udelay(500);
+	for(int i = 0; i < 32; i++) {
+		gpio_set_value(SPI_CLK, 0);	
+		gpio_set_value(SPI_MOSI, clocked_data & 0x80000000 ? 1 : 0);
+		clocked_data <<= 1;
+		udelay(500);
+		gpio_set_value(SPI_CLK, 1);	
+		udelay(500);
+	}
+	for(int i = 0; i < 8; i++) {
+		gpio_set_value(SPI_CLK, 0);	
+		gpio_set_value(SPI_MOSI, data & 0x80 ? 1 : 0);
+		data <<= 1;
+		udelay(500);
+		gpio_set_value(SPI_CLK, 1);	
+		udelay(500);
+	}
+	udelay(500);
+	gpio_set_value(SPI_SS0, 1);
+}
+
+u32 spi_read_reg(int reg_addr)
+{
+	u32 clocked_data = (((3 << 24) | reg_addr) << 5);
+	u32 data = 0;
+
+	gpio_set_value(SPI_CLK, 1);
+	udelay(500);
+	gpio_set_value(SPI_SS0, 0);
+	udelay(500);
+	for(int i = 0; i < 32; i++) {
+		gpio_set_value(SPI_CLK, 0);	
+		gpio_set_value(SPI_MOSI, clocked_data & 0x80000000 ? 1 : 0);
+		clocked_data <<= 1;
+		udelay(500);
+		gpio_set_value(SPI_CLK, 1);	
+		udelay(500);
+	}
+	for(int i = 0; i < 8; i++) {
+		gpio_set_value(SPI_CLK, 0);	
+		udelay(500);
+		data <<= 1;
+		data |= gpio_get_value(SPI_MISO);
+		gpio_set_value(SPI_MOSI, data & 0x80 ? 1 : 0);
+		gpio_set_value(SPI_CLK, 1);	
+		udelay(500);
+	}
+	udelay(500);
+	gpio_set_value(SPI_SS0, 1);
+	return data;
+}
+
 int board_eth_init(bd_t *bis)
 {
 	uint32_t base = IMX_FEC_BASE;
@@ -952,6 +1043,26 @@ int board_eth_init(bd_t *bis)
 	int ret;
 
 	setup_iomux_enet();
+
+	configure_spi_pins();
+	//read manufacturer ID
+	u32 man_id1 = spi_read_reg(2);	
+	printf("MANUFACTURER ID REG2 = %X\n", man_id1);
+	/*
+	while(1) {
+		u32 man_id1 = spi_read_reg(2);
+		printf("MANUFACTURER ID REG2 = %X\n", man_id1);
+		mdelay(4);
+		spi_write_reg(0x5100, (1<< (13-8)) | 1); //speed for port 5
+		u32 dat = spi_read_reg(0x5100);
+		printf("SPEED = %X\n", dat);
+	}
+	*/
+	spi_write_reg(0x7301, (1 << 3) | (1 << 4)); //enable clock delay on RGMII
+	spi_write_reg(0x5100, (1<< (13-8)) | 1); //speed for port 5
+	spi_write_reg(0x5101, 0); //speed for port 5
+	spi_write_reg(0x4100, (1<< (13-8)) | 1); //speed for port 5
+	spi_write_reg(0x4101, 0); //speed for port 5
 
 #ifdef CONFIG_FEC_MXC
 	bus = fec_get_miibus(base, -1);
