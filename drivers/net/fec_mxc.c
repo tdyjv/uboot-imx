@@ -180,15 +180,23 @@ static int fec_mdio_write(struct ethernet_regs *eth, uint8_t phyaddr,
 }
 
 static int fec_phy_read(struct mii_dev *bus, int phyaddr, int dev_addr,
-			int regaddr)
+			int regaddr)			
 {
+#ifdef TDY_NAV_BRD
+	return 0;
+#else	
 	return fec_mdio_read(bus->priv, phyaddr, regaddr);
+#endif	
 }
 
 static int fec_phy_write(struct mii_dev *bus, int phyaddr, int dev_addr,
 			 int regaddr, u16 data)
 {
+#ifdef TDY_NAV_BRD
+	return 0;
+#else	
 	return fec_mdio_write(bus->priv, phyaddr, regaddr, data);
+#endif	
 }
 
 #ifndef CONFIG_PHYLIB
@@ -484,7 +492,10 @@ static int fec_open(struct eth_device *edev)
 #endif
 
 #ifdef CONFIG_PHYLIB
-	{
+#ifdef TDY_NAV_BRD
+	speed = CONFIG_FEC_FIXED_SPEED;
+#else
+	{		
 		/* Start up the PHY */
 		int ret = phy_startup(fec->phydev);
 
@@ -495,6 +506,7 @@ static int fec_open(struct eth_device *edev)
 		}
 		speed = fec->phydev->speed;
 	}
+#endif	
 #elif CONFIG_FEC_FIXED_SPEED
 	speed = CONFIG_FEC_FIXED_SPEED;
 #else
@@ -584,6 +596,7 @@ static int fec_init(struct eth_device *dev, bd_t *bd)
 		miiphy_restart_aneg(dev);
 #endif
 	fec_open(dev);
+	printf("mcx eth init complete\n");
 	return 0;
 }
 
@@ -1080,10 +1093,14 @@ static int fec_probe(bd_t *bd, int dev_id, uint32_t base_addr,
 	fec->bus = bus;
 	fec_mii_setspeed(bus->priv);
 #ifdef CONFIG_PHYLIB
+#ifdef TDY_NAV_BRD
+	fec->phydev = NULL;
+#else
 	fec->phydev = phydev;
 	phy_connect_dev(phydev, edev);
 	/* Configure phy */
 	phy_config(phydev);
+#endif	
 #else
 	fec->phy_id = phy_id;
 #endif
@@ -1146,12 +1163,15 @@ int fecmxc_initialize_multi(bd_t *bd, int dev_id, int phy_id, uint32_t addr)
 	if (!bus)
 		return -ENOMEM;
 #ifdef CONFIG_PHYLIB
+#ifdef TDY_NAV_BRD
+#else
 	phydev = phy_find_by_mask(bus, 1 << phy_id, PHY_INTERFACE_MODE_RGMII);
 	if (!phydev) {
 		mdio_unregister(bus);
 		free(bus);
 		return -ENOMEM;
 	}
+#endif	
 	ret = fec_probe(bd, dev_id, addr, bus, phydev);
 #else
 	ret = fec_probe(bd, dev_id, addr, bus, phy_id);
@@ -1211,6 +1231,8 @@ static int fec_phy_init(struct fec_priv *priv, struct udevice *dev)
 	mask = 1 << CONFIG_FEC_MXC_PHYADDR;
 #endif
 
+#ifdef TDY_NAV_BRD
+#else	
 	phydev = phy_find_by_mask(priv->bus, mask, priv->interface);
 	if (!phydev)
 		return -ENODEV;
@@ -1219,7 +1241,7 @@ static int fec_phy_init(struct fec_priv *priv, struct udevice *dev)
 
 	priv->phydev = phydev;
 	phy_config(phydev);
-
+#endif
 	return 0;
 }
 

@@ -709,6 +709,8 @@ static void setup_gpmi_nand(void)
 
 int board_phy_config(struct phy_device *phydev)
 {
+#ifdef	TDY_NAV_BRD
+#else
 	if (phydev->drv->config)
 		phydev->drv->config(phydev);
 
@@ -731,7 +733,7 @@ int board_phy_config(struct phy_device *phydev)
 	ksz9031_phy_extended_write(phydev, 0x02,
 			MII_KSZ9031_EXT_RGMII_CLOCK_SKEW,
 			MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x03FF);
-
+#endif
 	return 0;
 }
 
@@ -1065,6 +1067,8 @@ int board_eth_init(bd_t *bis)
 	spi_write_reg(0x4101, 0); //speed for port 5
 
 #ifdef CONFIG_FEC_MXC
+#ifdef TDY_NAV_BRD
+#else
 	bus = fec_get_miibus(base, -1);
 	if (!bus) {
 		printf("FEC MXC bus: %s:failed\n", __func__);
@@ -1078,7 +1082,7 @@ int board_eth_init(bd_t *bis)
 		return 0;
 	}
 	printf("using phy at %d\n", phydev->addr);
-
+#endif
 	ret  = fec_probe(bis, -1, base, bus, phydev);
 	if (ret) {
 		printf("FEC MXC probe: %s:failed\n", __func__);
